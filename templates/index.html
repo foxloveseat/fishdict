@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Дневник рыбака</title>
+    <style>
+        :root {
+            --bg-color: #f9f9f9;
+            --text-color: #333;
+            --card-bg: #ffffff;
+            --form-bg: #ffffff;
+            --input-bg: #ffffff;
+            --input-text: #333;
+            --input-border: #ccc;
+            --row-bg: #f1f2f6;
+            --heading-color: #2c3e50;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --card-bg: #1e1e1e;
+            --form-bg: #1e1e1e;
+            --input-bg: #2d2d2d;
+            --input-text: #e0e0e0;
+            --input-border: #444;
+            --row-bg: #2c2c2c;
+            --heading-color: #ffffff;
+        }
+
+        body { font-family: Arial, sans-serif; max-width: 700px; margin: 30px auto; padding: 0 20px; background: var(--bg-color); color: var(--text-color); transition: background 0.3s, color 0.3s; }
+        h1, h2 { color: var(--heading-color); }
+        .card { background: var(--card-bg); padding: 15px 20px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 5px solid #3498db; position: relative; }
+        form { background: var(--form-bg); padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        label { display: block; margin-top: 10px; font-weight: bold; font-size: 14px; }
+        input, button { width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box; border: 1px solid var(--input-border); border-radius: 4px; font-size: 14px; background: var(--input-bg); color: var(--input-text); }
+        button { background: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        button:hover { background: #219653; }
+        .catch-row { background: var(--row-bg); padding: 15px; margin-top: 10px; border-radius: 6px; position: relative; }
+        .secondary-btn { background: #3498db; margin-top: 10px; }
+        .secondary-btn:hover { background: #2980b9; }
+        .delete-btn { background: #e74c3c; width: auto; padding: 6px 12px; margin-top: 15px; font-size: 12px; }
+        .delete-btn:hover { background: #c0392b; }
+        .remove-row-btn { background: #e74c3c; width: auto; padding: 6px 12px; margin-top: 10px; font-size: 12px; }
+        .remove-row-btn:hover { background: #c0392b; }
+        .theme-btn { background: #7f8c8d; width: auto; padding: 6px 12px; float: right; margin-top: 0; font-size: 13px; }
+        .theme-btn:hover { background: #6c7a89; }
+        ul { margin: 8px 0; padding-left: 20px; }
+        li { margin-bottom: 4px; }
+        .empty { color: #7f8c8d; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <button type="button" class="theme-btn" onclick="toggleTheme()">🌙 / ☀️ Темы</button>
+    <h1>🎣 Дневник рыбака</h1>
+
+    <form action="/add" method="POST">
+        <h2>Добавить новый выезд</h2>
+
+        <label>Дата:</label>
+        <input type="text" name="date" placeholder="например, 15-06-2026" required>
+
+        <label>Место (водоем):</label>
+        <input type="text" name="place" placeholder="например, Река Вологда" required>
+
+        <label>Кто поймал:</label>
+        <input type="text" name="user_name" list="users-list" placeholder="Выберите или введите имя" required>
+        <datalist id="users-list">
+            {{range .Users}}
+                <option value="{{.}}">
+            {{end}}
+        </datalist>
+
+        <h3>Улов</h3>
+        <div id="catches-container">
+            <div class="catch-row">
+                <label>Рыба:</label>
+                <input type="text" name="fish_name[]" list="fishes-list" placeholder="Название рыбы" required>
+
+                <label>Количество (шт):</label>
+                <input type="number" name="count[]" value="1" min="1" required>
+
+                <label>Приманка:</label>
+                <input type="text" name="lure_name[]" list="lures-list" placeholder="Название приманки" required>
+            </div>
+        </div>
+
+        <button type="button" class="secondary-btn" onclick="addCatchRow()">+ Добавить еще вид рыбы</button>
+        <button type="submit">Сохранить рыбалку</button>
+    </form>
+
+    <h2>История поездок</h2>
+
+    {{if .Trips}}
+        {{range .Trips}}
+            <div class="card">
+                <strong>📅 Дата:</strong> {{.Date}}<br>
+                <strong>📍 Место:</strong> {{.Place}}<br>
+                <strong>👤 Рыболов:</strong> {{.User.Name}}<br>
+                <strong>🐟 Улов:</strong>
+                <ul>
+                    {{range .Catches}}
+                        <li>{{.Fish.Name}} — {{.Count}} шт. (на приманку: {{.Lure.Name}})</li>
+                    {{end}}
+                </ul>
+                <form action="/delete/{{.Id}}" method="POST">
+                    <button type="submit" class="delete-btn">Удалить поездку</button>
+                </form>
+            </div>
+        {{end}}
+    {{else}}
+        <p class="empty">Пока нет ни одной записи. Заполните форму выше, чтобы добавить первую!</p>
+    {{end}}
+
+    <datalist id="fishes-list">
+        {{range .Fishes}}
+            <option value="{{.}}">
+        {{end}}
+    </datalist>
+
+    <datalist id="lures-list">
+        {{range .Lures}}
+            <option value="{{.}}">
+        {{end}}
+    </datalist>
+
+    <script>
+        function addCatchRow() {
+            const container = document.getElementById('catches-container');
+            const row = document.createElement('div');
+            row.className = 'catch-row';
+            row.innerHTML = `
+                <label>Рыба:</label>
+                <input type="text" name="fish_name[]" list="fishes-list" placeholder="Название рыбы" required>
+                <label>Количество (шт):</label>
+                <input type="number" name="count[]" value="1" min="1" required>
+                <label>Приманка:</label>
+                <input type="text" name="lure_name[]" list="lures-list" placeholder="Название приманки" required>
+                <button type="button" class="remove-row-btn" onclick="removeCatchRow(this)">Удалить эту рыбу</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function removeCatchRow(button) {
+            const row = button.closest('.catch-row');
+            const container = document.getElementById('catches-container');
+            if (container.children.length > 1) {
+                row.remove();
+            }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                html.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+
+</body>
+</html>
